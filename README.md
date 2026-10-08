@@ -27,7 +27,6 @@ The app is designed for rooted TVs with Homebrew Channel installed.
 - Start, stop, status, routes, config and log actions
 - Optional autostart on boot
 - Runtime uninstall action
-- PayPal donation QR popup
 
 ---
 
@@ -76,7 +75,7 @@ The bundled ARMv7 binaries also run on supported 64-bit LG TVs.
 Release package:
 
 ```text
-com.github.cfernande1470.wireguard_1.0.5_all.ipk
+com.github.cfernande1470.wireguard_1.0.6_all.ipk
 ```
 
 To package manually:
@@ -93,7 +92,7 @@ the bundled ARMv7 binaries run on both 32-bit and 64-bit TVs.
 Output:
 
 ```text
-dist/com.github.cfernande1470.wireguard_1.0.5_all.ipk
+dist/com.github.cfernande1470.wireguard_1.0.6_all.ipk
 ```
 
 ### 2. Install using Homebrew Channel
@@ -396,7 +395,6 @@ app/com.github.cfernande1470.wireguard/
   css/
   js/
   lib/
-  qrcode.png
   payload/wireguard/
     install.sh
     bin/
@@ -427,6 +425,11 @@ wireguard-tools/
 
 ## Changelog
 
+### 1.0.6
+
+- Updated project links and maintainer attribution to RodriguezCF
+- Simplified the TV interface
+
 ### 1.0.5
 
 Fixed:
@@ -442,7 +445,7 @@ Fixed:
 Fixed:
 
 - Add explicit five-way remote navigation for arrow keys and OK/Enter
-- Handle the Back key for upload and donation dialogs
+- Handle the Back key for upload dialog
 
 ### 1.0.2
 
@@ -480,7 +483,6 @@ Added:
 - Start, stop, status, routes, config and log actions
 - Optional autostart on boot
 - Runtime uninstall action
-- PayPal donation QR popup
 
 Notes:
 
@@ -524,7 +526,6 @@ La app está pensada para televisores con root y Homebrew Channel instalado.
 - Acciones de arrancar, parar, estado, rutas, configuración y log
 - Inicio automático opcional al arrancar
 - Acción de desinstalación del runtime
-- Popup de donación con QR de PayPal
 
 ---
 
@@ -573,7 +574,7 @@ Los binarios ARMv7 incluidos también funcionan en televisores LG de 64 bits com
 Paquete de release:
 
 ```text
-com.github.cfernande1470.wireguard_1.0.5_all.ipk
+com.github.cfernande1470.wireguard_1.0.6_all.ipk
 ```
 
 Para empaquetar manualmente:
@@ -590,7 +591,7 @@ porque los binarios ARMv7 incluidos funcionan en televisores de 32 y 64 bits.
 Resultado:
 
 ```text
-dist/com.github.cfernande1470.wireguard_1.0.5_all.ipk
+dist/com.github.cfernande1470.wireguard_1.0.6_all.ipk
 ```
 
 ### 2. Instalar usando Homebrew Channel
@@ -894,7 +895,6 @@ app/com.github.cfernande1470.wireguard/
   css/
   js/
   lib/
-  qrcode.png
   payload/wireguard/
     install.sh
     bin/
@@ -925,6 +925,11 @@ wireguard-tools/
 
 ## Registro de cambios
 
+### 1.0.6
+
+- Actualizados los enlaces del proyecto y la atribución a RodriguezCF
+- Simplificada la interfaz de la TV
+
 ### 1.0.5
 
 Corregido:
@@ -940,7 +945,6 @@ Corregido:
 Corregido:
 
 - Añadida navegación explícita con las flechas del mando y activación con OK/Enter
-- El botón Back cierra los diálogos de subida y donación
 
 ### 1.0.2
 
@@ -978,7 +982,6 @@ Añadido:
 - Acciones de arrancar, parar, estado, rutas, configuración y log
 - Inicio automático opcional al arrancar
 - Acción de desinstalación del runtime
-- Popup de donación con QR de PayPal
 
 Notas:
 

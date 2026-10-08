@@ -14,9 +14,6 @@ const I18N = {
     config: "Config",
     log: "Log",
     uploadConfig: "Upload config",
-    donate: "Donate!",
-    donateTitle: "Donate!",
-    donatePaypal: "Donate with PayPal",
     startOnBoot: "Start on boot",
     scrollUp: "▲ Up",
     scrollDown: "▼ Down",
@@ -98,9 +95,6 @@ const I18N = {
     config: "Config",
     log: "Log",
     uploadConfig: "Subir config",
-    donate: "Donar!",
-    donateTitle: "Donar!",
-    donatePaypal: "Donate with PayPal",
     startOnBoot: "Iniciar al arrancar",
     scrollUp: "▲ Subir",
     scrollDown: "▼ Bajar",
@@ -630,28 +624,6 @@ function closeUploadPopup() {
     }, 100);
   }, 15000);
 }
-function showDonatePopup() {
-  const modal = document.getElementById("donateModal");
-  if (!modal) return;
-
-  modal.classList.remove("hidden");
-
-  setTimeout(function() {
-    const btn = modal.querySelector("button");
-    if (btn) btn.focus();
-  }, 200);
-}
-
-function closeDonatePopup() {
-  const modal = document.getElementById("donateModal");
-  if (modal) modal.classList.add("hidden");
-
-  setTimeout(function() {
-    const btn = document.querySelector("button.donate");
-    if (btn) btn.focus();
-  }, 100);
-}
-
 function cleanupAll() {
   run(
     BASE + "/scripts/uninstall.sh",
@@ -787,8 +759,6 @@ function handleRemoteKey(event) {
     event.preventDefault();
     if (modal.id === "uploadModal") {
       closeUploadPopup();
-    } else if (modal.id === "donateModal") {
-      closeDonatePopup();
     }
     return;
   }
