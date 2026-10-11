@@ -55,4 +55,11 @@ ar p "$IPK" data.tar.gz | tar xzO "usr/palm/applications/$APP_ID/appinfo.json" |
 grep -q "\"id\": \"$APP_ID\"" "$MANIFEST"
 grep -q "${APP_ID}_${VERSION}_all.ipk" "$MANIFEST"
 
+MANIFEST_HASH="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["ipkHash"]["sha256"])' "$MANIFEST")"
+IPK_HASH="$(sha256sum "$IPK" | cut -d' ' -f1)"
+if [ "$MANIFEST_HASH" != "$IPK_HASH" ]; then
+  echo "ERROR: manifest ipkHash.sha256 ($MANIFEST_HASH) does not match IPK sha256 ($IPK_HASH)" >&2
+  exit 1
+fi
+
 echo "Release verification passed for $APP_ID $VERSION"
