@@ -3,7 +3,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 APP_ID="com.github.cfernande1470.wireguard"
-VERSION="1.0.6"
+VERSION="1.0.7"
 APP="$ROOT/app/$APP_ID"
 DIST="$ROOT/dist"
 PACKAGER="${ARES_PACKAGE:-ares-package}"
@@ -25,7 +25,16 @@ test -f "$IPK" || {
   exit 1
 }
 
-cp "$ROOT/$APP_ID.manifest.json" "$DIST/$APP_ID.manifest.json"
+python3 - "$ROOT/$APP_ID.manifest.json" "$IPK" "$DIST/$APP_ID.manifest.json" <<'PY'
+import hashlib
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text())
+manifest["ipkHash"] = {"sha256": hashlib.sha256(Path(sys.argv[2]).read_bytes()).hexdigest()}
+Path(sys.argv[3]).write_text(json.dumps(manifest, indent=2) + "\n")
+PY
 
 echo "Created $IPK"
 echo "Created $DIST/$APP_ID.manifest.json"

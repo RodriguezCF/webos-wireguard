@@ -75,7 +75,7 @@ The bundled ARMv7 binaries also run on supported 64-bit LG TVs.
 Release package:
 
 ```text
-com.github.cfernande1470.wireguard_1.0.6_all.ipk
+com.github.cfernande1470.wireguard_1.0.7_all.ipk
 ```
 
 To package manually:
@@ -92,7 +92,7 @@ the bundled ARMv7 binaries run on both 32-bit and 64-bit TVs.
 Output:
 
 ```text
-dist/com.github.cfernande1470.wireguard_1.0.6_all.ipk
+dist/com.github.cfernande1470.wireguard_1.0.7_all.ipk
 ```
 
 ### 2. Install using Homebrew Channel
@@ -425,6 +425,12 @@ wireguard-tools/
 
 ## Changelog
 
+### 1.0.7
+
+- Close inherited service descriptors before launching WireGuard and the upload server
+- Prevent background daemons from keeping Homebrew Luna connections open after the service exits
+- Preserve daemon PID tracking, logs, and upload-server startup settings
+
 ### 1.0.6
 
 - Updated project links and maintainer attribution to RodriguezCF
@@ -574,7 +580,7 @@ Los binarios ARMv7 incluidos también funcionan en televisores LG de 64 bits com
 Paquete de release:
 
 ```text
-com.github.cfernande1470.wireguard_1.0.6_all.ipk
+com.github.cfernande1470.wireguard_1.0.7_all.ipk
 ```
 
 Para empaquetar manualmente:
@@ -591,7 +597,7 @@ porque los binarios ARMv7 incluidos funcionan en televisores de 32 y 64 bits.
 Resultado:
 
 ```text
-dist/com.github.cfernande1470.wireguard_1.0.6_all.ipk
+dist/com.github.cfernande1470.wireguard_1.0.7_all.ipk
 ```
 
 ### 2. Instalar usando Homebrew Channel
@@ -924,6 +930,12 @@ wireguard-tools/
 ---
 
 ## Registro de cambios
+
+### 1.0.7
+
+- Cerrados los descriptores heredados del servicio antes de iniciar WireGuard y el servidor de subida
+- Evitado que los procesos en segundo plano mantengan abiertas las conexiones Luna tras salir el servicio de Homebrew
+- Conservados el seguimiento del PID, los logs y los ajustes de arranque del servidor de subida
 
 ### 1.0.6
 

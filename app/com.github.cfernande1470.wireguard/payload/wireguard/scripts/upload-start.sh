@@ -13,6 +13,7 @@ URLFILE="$RUN/wg-upload-url"
 mkdir -p "$RUN"
 
 [ -x "$BIN" ] || { echo "ERROR: does not exist $BIN"; exit 1; }
+[ -x "$HERE/exec-clean.sh" ] || { echo "ERROR: missing clean launcher"; exit 1; }
 
 kill "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null || true
 killall wg-upload 2>/dev/null || true
@@ -66,7 +67,7 @@ fi
 
 echo "http://$IP:8088" > "$URLFILE"
 
-WG_UPLOAD_TOKEN_FILE="$TOKENFILE" WG_UPLOAD_TIMEOUT=600 "$BIN" >"$LOGFILE" 2>&1 &
+WG_UPLOAD_TOKEN_FILE="$TOKENFILE" WG_UPLOAD_TIMEOUT=600 "$HERE/exec-clean.sh" "$BIN" >"$LOGFILE" 2>&1 &
 echo $! > "$PIDFILE"
 
 i=0

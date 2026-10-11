@@ -1,13 +1,13 @@
 {
   "id": "com.github.cfernande1470.wireguard",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "web",
   "title": "WireGuard VPN",
   "iconUri": "https://raw.githubusercontent.com/RodriguezCF/webos-wireguard/main/app/com.github.cfernande1470.wireguard/icon.png",
   "sourceUrl": "https://github.com/RodriguezCF/webos-wireguard",
   "rootRequired": true,
-  "ipkUrl": "https://github.com/RodriguezCF/webos-wireguard/releases/download/v1.0.6/com.github.cfernande1470.wireguard_1.0.6_all.ipk",
+  "ipkUrl": "https://github.com/RodriguezCF/webos-wireguard/releases/download/v1.0.7/com.github.cfernande1470.wireguard_1.0.7_all.ipk",
   "ipkHash": {
-    "sha256": "c69255465ab76b88095532a6862eafee45d359086089131bd3c9a3c11b92641e"
+    "sha256": "970c53b0de345635f6e2b45c1615ca28ceebffce504800a0b1f5e97caff9b168"
   }
 }

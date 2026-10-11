@@ -66,6 +66,7 @@ trap release_operation_lock EXIT HUP INT TERM
 
 [ -x "$WG" ] || { echo "ERROR: does not exist $WG"; exit 1; }
 [ -x "$WGGO" ] || { echo "ERROR: does not exist $WGGO"; exit 1; }
+[ -x "$HERE/exec-clean.sh" ] || { echo "ERROR: missing clean launcher"; exit 1; }
 [ -f "$CONF" ] || { echo "ERROR: missing $CONF"; exit 1; }
 
 trim() {
@@ -287,7 +288,7 @@ rm -f "/var/run/wireguard/$IFACE.sock"
 echo "== starting wireguard-go =="
 # Keep the daemon in foreground mode under this shell's background job so $!
 # remains the real long-lived PID instead of the short-lived launcher PID.
-LOG_LEVEL=info "$WGGO" -f "$IFACE" >"$LOGFILE" 2>&1 &
+LOG_LEVEL=info "$HERE/exec-clean.sh" "$WGGO" -f "$IFACE" >"$LOGFILE" 2>&1 &
 echo $! > "$PIDFILE"
 
 sleep 2
