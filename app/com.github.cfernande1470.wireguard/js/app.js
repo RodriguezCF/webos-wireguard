@@ -1,8 +1,8 @@
-const BASE = "/var/lib/webosbrew/wireguard";
-const APPDIR = "/media/developer/apps/usr/palm/applications/com.github.cfernande1470.wireguard";
-const HB_SERVICE = "luna://org.webosbrew.hbchannel.service";
+var BASE = "/var/lib/webosbrew/wireguard";
+var APPDIR = "/media/developer/apps/usr/palm/applications/com.github.cfernande1470.wireguard";
+var HB_SERVICE = "luna://org.webosbrew.hbchannel.service";
 
-const I18N = {
+var I18N = {
   en: {
     subtitle: "WireGuard client for webOS Homebrew",
     installUpdate: "Install / update",
@@ -166,7 +166,7 @@ const I18N = {
   }
 };
 
-let currentLang = "en";
+var currentLang = "en";
 
 try {
   currentLang = localStorage.getItem("wgLanguage") || "en";
@@ -185,20 +185,20 @@ function t(key) {
 function applyLanguage() {
   document.documentElement.lang = currentLang;
 
-  const textNodes = document.querySelectorAll("[data-i18n]");
-  for (let i = 0; i < textNodes.length; i++) {
-    const key = textNodes[i].getAttribute("data-i18n");
+  var textNodes = document.querySelectorAll("[data-i18n]");
+  for (var i = 0; i < textNodes.length; i++) {
+    var key = textNodes[i].getAttribute("data-i18n");
     textNodes[i].textContent = t(key);
   }
 
-  const htmlNodes = document.querySelectorAll("[data-i18n-html]");
-  for (let i = 0; i < htmlNodes.length; i++) {
-    const key = htmlNodes[i].getAttribute("data-i18n-html");
+  var htmlNodes = document.querySelectorAll("[data-i18n-html]");
+  for (var i = 0; i < htmlNodes.length; i++) {
+    var key = htmlNodes[i].getAttribute("data-i18n-html");
     htmlNodes[i].innerHTML = t(key);
   }
 
-  const enBtn = document.getElementById("langEn");
-  const esBtn = document.getElementById("langEs");
+  var enBtn = document.getElementById("langEn");
+  var esBtn = document.getElementById("langEs");
 
   if (enBtn) {
     enBtn.classList.toggle("active", currentLang === "en");
@@ -229,12 +229,12 @@ function setLanguage(lang) {
 
 
 function setStatus(text) {
-  const el = document.getElementById("statusLine");
+  var el = document.getElementById("statusLine");
   if (el) el.textContent = text || "";
 }
 
 function print(text) {
-  const el = document.getElementById("out");
+  var el = document.getElementById("out");
   if (el) {
     el.textContent = text || "";
     el.scrollTop = 0;
@@ -242,18 +242,18 @@ function print(text) {
 }
 
 function append(text) {
-  const el = document.getElementById("out");
+  var el = document.getElementById("out");
   if (el) el.textContent += "\n" + (text || "");
 }
 
 function scrollOutput(direction) {
-  const el = document.getElementById("out");
+  var el = document.getElementById("out");
   if (!el) return;
   el.scrollTop += direction * 300;
 }
 
 function scrollOutputToEnd() {
-  const el = document.getElementById("out");
+  var el = document.getElementById("out");
   if (!el) return;
   el.scrollTop = el.scrollHeight;
 }
@@ -268,7 +268,7 @@ function decodeBase64Maybe(value) {
 }
 
 function formatResponse(res) {
-  let out = "";
+  var out = "";
 
   if (res.stdoutString) {
     out += res.stdoutString;
@@ -279,7 +279,7 @@ function formatResponse(res) {
   if (res.stderrString) {
     out += "\nSTDERR:\n" + res.stderrString;
   } else if (res.stderrBytes) {
-    const stderr = decodeBase64Maybe(res.stderrBytes);
+    var stderr = decodeBase64Maybe(res.stderrBytes);
     if (stderr) out += "\nSTDERR:\n" + stderr;
   }
 
@@ -302,7 +302,7 @@ function execCommand(command, callback, timeoutMs) {
   timeoutMs = timeoutMs || 20000;
 
   if (!serviceAvailable()) {
-    const msg =
+    var msg =
       t("serviceUnavailable");
     print(msg);
     setStatus(t("serviceUnavailableStatus"));
@@ -310,12 +310,12 @@ function execCommand(command, callback, timeoutMs) {
     return;
   }
 
-  let finished = false;
+  var finished = false;
 
-  const timer = setTimeout(function() {
+  var timer = setTimeout(function() {
     if (!finished) {
       finished = true;
-      const msg = t("hbTimeout");
+      var msg = t("hbTimeout");
       append("\n\n" + msg);
       setStatus("Timeout");
       if (callback) callback(false, msg);
@@ -332,21 +332,21 @@ function execCommand(command, callback, timeoutMs) {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
-        const out = formatResponse(res);
+        var out = formatResponse(res);
         if (callback) callback(true, out, res);
       },
       onFailure: function(err) {
         if (finished) return;
         finished = true;
         clearTimeout(timer);
-        const out = t("lunaError") + ":\n" + JSON.stringify(err, null, 2);
+        var out = t("lunaError") + ":\n" + JSON.stringify(err, null, 2);
         if (callback) callback(false, out, err);
       }
     });
   } catch (e) {
     finished = true;
     clearTimeout(timer);
-    const out = t("jsException") + ":\n" + e.message + "\n\n" + (e.stack || "");
+    var out = t("jsException") + ":\n" + e.message + "\n\n" + (e.stack || "");
     if (callback) callback(false, out, e);
   }
 }
@@ -355,7 +355,7 @@ function run(command, label, timeoutMs) {
   setStatus(t("executing"));
   print("Running:\n" + (label || command) + "\n\nWaiting for response...");
 
-  const wrappedCommand =
+  var wrappedCommand =
     "( " + command + " ); " +
     "RC=$?; " +
     "echo; echo COMMAND_RC=$RC; " +
@@ -364,8 +364,8 @@ function run(command, label, timeoutMs) {
   execCommand(wrappedCommand, function(ok, out) {
     print(out);
 
-    const commandOk = ok && out.indexOf("COMMAND_RC=0") !== -1;
-    setStatus(commandOk ? t("completed") : t("error"));
+    var commandOk = ok && out.indexOf("COMMAND_RC=0") !== -1;
+    setStatus(commandOk ? t("compvared") : t("error"));
   }, timeoutMs || 20000);
 }
 
@@ -391,13 +391,13 @@ function componentsCheckCommand() {
 
 function checkComponents(callback) {
   execCommand(componentsCheckCommand(), function(ok, out) {
-    const installed = out.indexOf("COMPONENTS_STATUS=installed") !== -1;
+    var installed = out.indexOf("COMPONENTS_STATUS=installed") !== -1;
     if (callback) callback(installed, out);
   }, 10000);
 }
 
 function installComponents() {
-  const cmd =
+  var cmd =
     "APPID='com.github.cfernande1470.wireguard'; " +
     "echo 'Installing/updating WireGuard components...'; " +
     "echo; echo '== whoami / id =='; " +
@@ -438,7 +438,7 @@ function installComponents() {
   execCommand(cmd, function(ok, out) {
     print(out);
 
-    const installOk = ok && out.indexOf("INSTALL_RC=0") !== -1;
+    var installOk = ok && out.indexOf("INSTALL_RC=0") !== -1;
 
     if (installOk) {
       setStatus(t("componentsInstalled"));
@@ -517,25 +517,25 @@ function uploadStart() {
 }
 
 function refreshAutostart() {
-  const cmd =
+  var cmd =
     "if [ -x " + BASE + "/scripts/autostart.sh ]; then " +
     BASE + "/scripts/autostart.sh status; " +
     "else echo 'Autostart: unavailable'; fi";
 
   execCommand(cmd, function(ok, out) {
-    const toggle = document.getElementById("autostartToggle");
+    var toggle = document.getElementById("autostartToggle");
     if (!toggle) return;
 
-    const unavailable = out.indexOf("unavailable") !== -1;
+    var unavailable = out.indexOf("unavailable") !== -1;
     toggle.checked = out.indexOf("enabled") !== -1;
     toggle.disabled = unavailable;
   }, 10000);
 }
 
 function toggleAutostart() {
-  const toggle = document.getElementById("autostartToggle");
-  const enable = toggle && toggle.checked;
-  const cmd = BASE + "/scripts/autostart.sh " + (enable ? "enable" : "disable");
+  var toggle = document.getElementById("autostartToggle");
+  var enable = toggle && toggle.checked;
+  var cmd = BASE + "/scripts/autostart.sh " + (enable ? "enable" : "disable");
 
   run(cmd, enable ? t("autostartEnable") : t("autostartDisable"), 15000);
 
@@ -570,7 +570,7 @@ window.onload = function() {
       setStatus(t("installPending"));
       print(t("checkMissing"));
 
-      const toggle = document.getElementById("autostartToggle");
+      var toggle = document.getElementById("autostartToggle");
       if (toggle) {
         toggle.checked = false;
         toggle.disabled = true;
@@ -579,23 +579,23 @@ window.onload = function() {
   });
 
   setTimeout(function() {
-    const btn = document.querySelector("button");
+    var btn = document.querySelector("button");
     if (btn) btn.focus();
   }, 300);
 };
 
 function showUploadPopup(output) {
-  const modal = document.getElementById("uploadModal");
-  const urlEl = document.getElementById("uploadUrl");
-  const pinEl = document.getElementById("uploadPin");
+  var modal = document.getElementById("uploadModal");
+  var urlEl = document.getElementById("uploadUrl");
+  var pinEl = document.getElementById("uploadPin");
 
   if (!modal || !urlEl || !pinEl) return;
 
-  const urlMatch = output.match(/URL:\s*(http:\/\/[^\s]+)/i);
-  const pinMatch = output.match(/CODE:\s*([0-9a-f]{8})/i);
+  var urlMatch = output.match(/URL:\s*(http:\/\/[^\s]+)/i);
+  var pinMatch = output.match(/CODE:\s*([0-9a-f]{8})/i);
 
-  const url = urlMatch ? urlMatch[1] : "No encontrada";
-  const pin = pinMatch ? pinMatch[1] : "--------";
+  var url = urlMatch ? urlMatch[1] : "No encontrada";
+  var pin = pinMatch ? pinMatch[1] : "--------";
 
   urlEl.textContent = url;
   pinEl.textContent = pin;
@@ -603,13 +603,13 @@ function showUploadPopup(output) {
   modal.classList.remove("hidden");
 
   setTimeout(function() {
-    const btn = modal.querySelector("button");
+    var btn = modal.querySelector("button");
     if (btn) btn.focus();
   }, 200);
 }
 
 function closeUploadPopup() {
-  const modal = document.getElementById("uploadModal");
+  var modal = document.getElementById("uploadModal");
   if (modal) modal.classList.add("hidden");
 
   setStatus(t("uploadStopping"));
@@ -619,7 +619,7 @@ function closeUploadPopup() {
     setStatus(ok ? t("uploadStopped") : t("uploadStopError"));
 
     setTimeout(function() {
-      const btn = document.querySelector("button.upload");
+      var btn = document.querySelector("button.upload");
       if (btn) btn.focus();
     }, 100);
   }, 15000);
@@ -642,7 +642,7 @@ function remoteKeyCode(event) {
   }
 
   if (event && event.key) {
-    const keys = {
+    var keys = {
       ArrowLeft: 37,
       ArrowUp: 38,
       ArrowRight: 39,
@@ -658,21 +658,21 @@ function remoteKeyCode(event) {
 }
 
 function visibleModal() {
-  const modals = document.querySelectorAll(".modal");
-  for (let i = 0; i < modals.length; i++) {
+  var modals = document.querySelectorAll(".modal");
+  for (var i = 0; i < modals.length; i++) {
     if (!modals[i].classList.contains("hidden")) return modals[i];
   }
   return null;
 }
 
 function remoteFocusableElements() {
-  const modal = visibleModal();
-  const root = modal || document;
-  const elements = root.querySelectorAll("button, input[type=checkbox]");
-  const focusable = [];
+  var modal = visibleModal();
+  var root = modal || document;
+  var elements = root.querySelectorAll("button, input[type=checkbox]");
+  var focusable = [];
 
-  for (let i = 0; i < elements.length; i++) {
-    const element = elements[i];
+  for (var i = 0; i < elements.length; i++) {
+    var element = elements[i];
     if (element.disabled) continue;
     if (element.offsetWidth === 0 || element.offsetHeight === 0) continue;
     focusable.push(element);
@@ -682,32 +682,32 @@ function remoteFocusableElements() {
 }
 
 function moveRemoteFocus(direction) {
-  const elements = remoteFocusableElements();
+  var elements = remoteFocusableElements();
   if (!elements.length) return false;
 
-  let current = document.activeElement;
+  var current = document.activeElement;
   if (elements.indexOf(current) === -1) {
     elements[0].focus();
     return true;
   }
 
-  const currentRect = current.getBoundingClientRect();
-  const currentX = currentRect.left + currentRect.width / 2;
-  const currentY = currentRect.top + currentRect.height / 2;
-  let best = null;
-  let bestScore = Infinity;
+  var currentRect = current.getBoundingClientRect();
+  var currentX = currentRect.left + currentRect.width / 2;
+  var currentY = currentRect.top + currentRect.height / 2;
+  var best = null;
+  var bestScore = Infinity;
 
-  for (let i = 0; i < elements.length; i++) {
-    const candidate = elements[i];
+  for (var i = 0; i < elements.length; i++) {
+    var candidate = elements[i];
     if (candidate === current) continue;
 
-    const rect = candidate.getBoundingClientRect();
-    const candidateX = rect.left + rect.width / 2;
-    const candidateY = rect.top + rect.height / 2;
-    const dx = candidateX - currentX;
-    const dy = candidateY - currentY;
-    const primary = direction === "left" || direction === "right" ? dx : dy;
-    const cross = direction === "left" || direction === "right" ? dy : dx;
+    var rect = candidate.getBoundingClientRect();
+    var candidateX = rect.left + rect.width / 2;
+    var candidateY = rect.top + rect.height / 2;
+    var dx = candidateX - currentX;
+    var dy = candidateY - currentY;
+    var primary = direction === "left" || direction === "right" ? dx : dy;
+    var cross = direction === "left" || direction === "right" ? dy : dx;
 
     if (
       (direction === "left" && primary >= -2) ||
@@ -720,7 +720,7 @@ function moveRemoteFocus(direction) {
 
     // Prefer controls in the same row/column, while still allowing wrapped
     // flex rows to be reached when the nearest control is slightly offset.
-    const score = Math.abs(primary) + Math.abs(cross) * 2;
+    var score = Math.abs(primary) + Math.abs(cross) * 2;
     if (score < bestScore) {
       best = candidate;
       bestScore = score;
@@ -741,8 +741,8 @@ function moveRemoteFocus(direction) {
 }
 
 function handleRemoteKey(event) {
-  const code = remoteKeyCode(event);
-  const modal = visibleModal();
+  var code = remoteKeyCode(event);
+  var modal = visibleModal();
 
   if (code === 461 || code === 27) {
     if (!modal) {
@@ -764,7 +764,7 @@ function handleRemoteKey(event) {
   }
 
   if (code === 13) {
-    const active = document.activeElement;
+    var active = document.activeElement;
     if (
       active &&
       (active.tagName === "BUTTON" ||
@@ -776,13 +776,13 @@ function handleRemoteKey(event) {
     return;
   }
 
-  const directions = {
+  var directions = {
     37: "left",
     38: "up",
     39: "right",
     40: "down"
   };
-  const direction = directions[code];
+  var direction = directions[code];
   if (!direction) return;
 
   if (moveRemoteFocus(direction)) {
