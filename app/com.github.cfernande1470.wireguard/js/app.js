@@ -365,7 +365,7 @@ function run(command, label, timeoutMs) {
     print(out);
 
     var commandOk = ok && out.indexOf("COMMAND_RC=0") !== -1;
-    setStatus(commandOk ? t("compvared") : t("error"));
+    setStatus(commandOk ? t("completed") : t("error"));
   }, timeoutMs || 20000);
 }
 
