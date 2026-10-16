@@ -425,6 +425,11 @@ wireguard-tools/
 
 ## Changelog
 
+### 1.0.8-rc.1 (compatibility test)
+
+- Use ES5 variable declarations in the frontend for testing older webOS engines
+- Keep the official webOS 5.0 minimum pending real-device compatibility reports
+
 ### 1.0.7
 
 - Close inherited service descriptors before launching WireGuard and the upload server
@@ -930,6 +935,11 @@ wireguard-tools/
 ---
 
 ## Registro de cambios
+
+### 1.0.8-rc.1 (prueba de compatibilidad)
+
+- Usadas declaraciones de variables ES5 para probar motores antiguos de webOS
+- Mantenido el mínimo oficial de webOS 5.0 hasta recibir pruebas en dispositivos antiguos
 
 ### 1.0.7
 
