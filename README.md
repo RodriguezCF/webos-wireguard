@@ -425,6 +425,12 @@ wireguard-tools/
 
 ## Changelog
 
+### 1.0.8
+
+- Fix unresponsive UI on older webOS engines by using ES5 variable declarations (thanks @mastrogippo, PR #8)
+- Confirmed working by two users on webOS 3.9.3, including installation, configuration upload, VPN start/stop, root status and autostart
+- Stable release uses the same IPK tested as 1.0.8-rc.1; the official catalog minimum remains webOS 5.0
+
 ### 1.0.7
 
 - Close inherited service descriptors before launching WireGuard and the upload server
@@ -930,6 +936,12 @@ wireguard-tools/
 ---
 
 ## Registro de cambios
+
+### 1.0.8
+
+- Corregida la interfaz que no respondía en motores antiguos de webOS usando declaraciones de variables ES5 (gracias a @mastrogippo, PR #8)
+- Dos usuarios confirman su funcionamiento en webOS 3.9.3, incluida la instalación, subida de configuración, inicio/parada de VPN, estado root y arranque automático
+- La versión estable usa el mismo IPK probado como 1.0.8-rc.1; el mínimo oficial del catálogo sigue siendo webOS 5.0
 
 ### 1.0.7
 
