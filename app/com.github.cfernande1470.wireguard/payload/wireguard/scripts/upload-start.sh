@@ -94,5 +94,7 @@ echo
 echo "URL: http://$IP:8088"
 echo "CODE: $TOKEN"
 echo "The server stops after 10 minutes, five wrong codes, or one successful upload."
+echo "The upload is plain HTTP (not encrypted): use it only on your own home network."
+echo "Only devices with a local network address are accepted."
 echo
 echo "Open that URL from your computer, enter the access code and upload wg0.conf."
