@@ -1,72 +1,52 @@
 #!/bin/sh
 set -eu
 
-BASE="/var/lib/webosbrew/wireguard"
 HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-WG="$HERE/../bin/wg"
-WGGO="$HERE/../bin/wireguard-go"
-IFACE="wg0"
+. "$HERE/lib.sh"
 
-CONF="$BASE/conf/wg0.conf"
-ADDRESS_FILE="$BASE/conf/address"
-ROUTES_EXTRA_FILE="$BASE/conf/routes-extra"
-
-RUN="$BASE/run"
-PIDFILE="$RUN/wireguard-go.pid"
-LOGFILE="$RUN/wireguard-go.log"
-GWFILE="$RUN/original-gateway"
-DEVFILE="$RUN/original-dev"
-ENDPOINTS_FILE="$RUN/endpoint-routes"
-APPLIED_ROUTES_FILE="$RUN/applied-routes"
-SETCONF_FILE="$RUN/wg0.setconf"
-IPV6_STATE_FILE="$RUN/original-ipv6-disabled"
-OPERATION_LOCK="$RUN/operation.lock"
+# WG_FROM_WATCHDOG=1: restart requested by the watchdog (it keeps running).
+# WG_KEEP_KILLSWITCH=1: a failed start keeps traffic blocked (boot, watchdog).
+FROM_WATCHDOG="${WG_FROM_WATCHDOG:-0}"
+KEEP_BLOCK=0
 START_OK=0
+START_NOTES=""
 
 mkdir -p "$RUN" /var/run/wireguard
 
-acquire_operation_lock() {
-  if mkdir "$OPERATION_LOCK" 2>/dev/null; then
-    echo "$$" > "$OPERATION_LOCK/pid"
-    return 0
-  fi
+if ks_enabled && { [ "${WG_KEEP_KILLSWITCH:-0}" = 1 ] || [ "$FROM_WATCHDOG" = 1 ]; }; then
+  KEEP_BLOCK=1
+fi
 
-  lock_pid="$(cat "$OPERATION_LOCK/pid" 2>/dev/null || true)"
-  if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
-    echo "ERROR: another WireGuard start/stop operation is running (PID $lock_pid)"
-    exit 1
-  fi
-
-  rm -rf "$OPERATION_LOCK"
-  mkdir "$OPERATION_LOCK"
-  echo "$$" > "$OPERATION_LOCK/pid"
-}
-
-restore_ipv6_after_failed_start() {
+cleanup_failed_start() {
   [ "$START_OK" -eq 0 ] || return 0
-  [ -f "$DEVFILE" ] && [ -f "$IPV6_STATE_FILE" ] || return 0
-
-  restore_dev="$(cat "$DEVFILE")"
-  restore_value="$(cat "$IPV6_STATE_FILE")"
-  if [ -n "$restore_dev" ] && [ -n "$restore_value" ]; then
-    sysctl -w "net.ipv6.conf.$restore_dev.disable_ipv6=$restore_value" >/dev/null 2>&1 || true
+  echo
+  echo "== start failed: cleaning up =="
+  if [ "$KEEP_BLOCK" = 1 ]; then
+    teardown_tunnel 1
+    write_state blocked "start failed; kill switch keeps traffic blocked"
+  else
+    [ "$FROM_WATCHDOG" = 1 ] || stop_watchdog
+    teardown_tunnel 0
+    [ "$FROM_WATCHDOG" = 1 ] || write_state failed "start failed"
   fi
-  rm -f "$IPV6_STATE_FILE"
 }
 
-release_operation_lock() {
+on_exit() {
   rc=$?
-  restore_ipv6_after_failed_start
-  rm -rf "$OPERATION_LOCK"
+  set +e
+  cleanup_failed_start
+  release_lock_dir
   exit "$rc"
 }
 
 acquire_operation_lock
-trap release_operation_lock EXIT HUP INT TERM
+trap on_exit EXIT
+trap 'exit 1' HUP INT TERM
 
 [ -x "$WG" ] || { echo "ERROR: does not exist $WG"; exit 1; }
 [ -x "$WGGO" ] || { echo "ERROR: does not exist $WGGO"; exit 1; }
 [ -x "$HERE/exec-clean.sh" ] || { echo "ERROR: missing clean launcher"; exit 1; }
+[ -x "$HERE/watchdog.sh" ] || { echo "ERROR: missing watchdog"; exit 1; }
 [ -f "$CONF" ] || { echo "ERROR: missing $CONF"; exit 1; }
 
 trim() {
@@ -87,7 +67,6 @@ get_value() {
 
 extract_addresses_from_conf() {
   section=""
-  found=""
 
   while IFS= read -r raw || [ -n "$raw" ]; do
     line="$(trim "$raw")"
@@ -110,7 +89,6 @@ extract_addresses_from_conf() {
               addr="$(trim "$addr")"
               [ -n "$addr" ] && echo "$addr"
             done > "$ADDRESS_FILE.tmp"
-            found="1"
             break
           fi
           ;;
@@ -127,45 +105,44 @@ extract_addresses_from_conf() {
 }
 
 extract_mtu_from_conf() {
-  section=""
-  mtu=""
-
-  while IFS= read -r raw || [ -n "$raw" ]; do
-    line="$(trim "$raw")"
-    [ -z "$line" ] && continue
-
-    case "$line" in
-      \[*\])
-        section="$(lower "$line")"
-        continue
-        ;;
-    esac
-
-    if [ "$section" = "[interface]" ]; then
-      case "$line" in
-        *=*)
-          key="$(lower "$(get_key "$line")")"
-          if [ "$key" = "mtu" ]; then
-            mtu="$(get_value "$line")"
-            break
-          fi
-          ;;
-      esac
-    fi
-  done < "$CONF"
-
+  mtu="$(conf_interface_values "$CONF" mtu | head -1)"
   case "$mtu" in
     ""|*[!0-9]*)
       mtu="1420"
       ;;
   esac
-
   echo "$mtu"
+}
+
+# Hostname endpoints are resolved here through the original resolver, so a
+# restart also works while the resolver points at the (broken) tunnel DNS.
+resolve_endpoint_value() {
+  ep="$1"
+  case "$ep" in
+    \[*) echo "$ep"; return 0 ;;
+  esac
+  ep_host="$(endpoint_host "$ep")"
+  ep_port="$(endpoint_port "$ep")"
+  if is_ipv4 "$ep_host"; then
+    echo "$ep"
+    return 0
+  fi
+  if ep_addr="$(resolve_or_cached "$ep_host")"; then
+    echo "endpoint $ep_host resolved" >&2
+    case "$ep_addr" in
+      *:*) echo "[$ep_addr]:$ep_port" ;;
+      *) echo "$ep_addr:$ep_port" ;;
+    esac
+  else
+    echo "endpoint $ep_host left for wg to resolve" >&2
+    echo "$ep"
+  fi
 }
 
 make_wg_setconf_file() {
   section=""
   : > "$SETCONF_FILE"
+  chmod 600 "$SETCONF_FILE"
 
   while IFS= read -r raw || [ -n "$raw" ]; do
     line="$(trim "$raw")"
@@ -180,19 +157,22 @@ make_wg_setconf_file() {
         ;;
     esac
 
-    if [ "$section" = "[interface]" ]; then
-      case "$line" in
-        *=*)
-          key="$(lower "$(get_key "$line")")"
-
+    case "$line" in
+      *=*)
+        key="$(lower "$(get_key "$line")")"
+        if [ "$section" = "[interface]" ]; then
           case "$key" in
             address|dns|mtu|table|preup|postup|predown|postdown|saveconfig)
               continue
               ;;
           esac
-          ;;
-      esac
-    fi
+        fi
+        if [ "$section" = "[peer]" ] && [ "$key" = "endpoint" ]; then
+          echo "Endpoint = $(resolve_endpoint_value "$(get_value "$line")")" >> "$SETCONF_FILE"
+          continue
+        fi
+        ;;
+    esac
 
     echo "$line" >> "$SETCONF_FILE"
   done < "$CONF"
@@ -218,30 +198,34 @@ add_route() {
     return
   fi
 
-  if ! grep -qx "$route" "$APPLIED_ROUTES_FILE" 2>/dev/null; then
+  if ! grep -qxF "$route" "$APPLIED_ROUTES_FILE" 2>/dev/null; then
     echo "$route" >> "$APPLIED_ROUTES_FILE"
   fi
 }
 
+[ "$FROM_WATCHDOG" = 1 ] || stop_watchdog
+[ "$FROM_WATCHDOG" = 1 ] || write_state starting ""
+
+echo "== previous cleanup =="
+teardown_tunnel "$KEEP_BLOCK"
+
+echo
 echo "== detecting original default route =="
-DEFAULT_LINE="$(ip route show default | grep -v " dev $IFACE " | head -1 || true)"
+detect_default4
+detect_default6
 
-ORIG_GW="$(echo "$DEFAULT_LINE" | sed -n 's/.*default via \([^ ]*\).*/\1/p')"
-ORIG_DEV="$(echo "$DEFAULT_LINE" | sed -n 's/.* dev \([^ ]*\).*/\1/p')"
-
-if [ -n "${ORIG_DEV:-}" ]; then
-  echo "$ORIG_DEV" > "$DEVFILE"
-  [ -n "${ORIG_GW:-}" ] && echo "$ORIG_GW" > "$GWFILE" || : > "$GWFILE"
-
-  if [ -n "${ORIG_GW:-}" ]; then
-    echo "original default: via $ORIG_GW dev $ORIG_DEV"
-  else
-    echo "original default: dev $ORIG_DEV"
-  fi
+if [ -n "$D4_DEV" ]; then
+  echo "$D4_DEV" > "$DEVFILE"
+  echo "$D4_GW" > "$GWFILE"
+  echo "original default: ${D4_GW:+via $D4_GW }dev $D4_DEV"
 else
-  echo "WARNING: cannot find original default route outside $IFACE"
+  echo "WARNING: cannot find an IPv4 default route outside $IFACE"
+fi
+if [ -n "$D6_DEV" ]; then
+  echo "original IPv6 default: ${D6_GW:+via $D6_GW }dev $D6_DEV"
 fi
 
+echo
 echo "== preparing configuration =="
 extract_addresses_from_conf
 
@@ -254,37 +238,13 @@ MTU="$(extract_mtu_from_conf)"
 echo "MTU: $MTU"
 
 make_wg_setconf_file
-
-if [ -n "${ORIG_DEV:-}" ]; then
-  echo "== disabling IPv6 on $ORIG_DEV to prevent leaks outside the tunnel =="
-  if [ -f "$IPV6_STATE_FILE" ]; then
-    echo "Keeping previously saved IPv6 state"
-  else
-    CUR_DISABLE_V6="$(sysctl -n "net.ipv6.conf.$ORIG_DEV.disable_ipv6" 2>/dev/null || true)"
-    if [ -n "$CUR_DISABLE_V6" ]; then
-      echo "$CUR_DISABLE_V6" > "$IPV6_STATE_FILE"
-    else
-      echo "WARNING: could not read IPv6 state for $ORIG_DEV, leaving it untouched"
-    fi
-  fi
-
-  if [ -f "$IPV6_STATE_FILE" ]; then
-    if ! sysctl -w "net.ipv6.conf.$ORIG_DEV.disable_ipv6=1" >/dev/null 2>&1; then
-      echo "WARNING: could not disable IPv6 on $ORIG_DEV"
-      rm -f "$IPV6_STATE_FILE"
-    fi
-  fi
-fi
+prepare_dns
 
 echo
 echo "== generated wg setconf file =="
 sed -E 's#^(PrivateKey[[:space:]]*=[[:space:]]*).*#\1REDACTED#;s#^(PresharedKey[[:space:]]*=[[:space:]]*).*#\1REDACTED#' "$SETCONF_FILE"
 
-echo "== previous cleanup =="
-killall wireguard-go 2>/dev/null || true
-ip link del "$IFACE" 2>/dev/null || true
-rm -f "/var/run/wireguard/$IFACE.sock"
-
+echo
 echo "== starting wireguard-go =="
 # Keep the daemon in foreground mode under this shell's background job so $!
 # remains the real long-lived PID instead of the short-lived launcher PID.
@@ -301,32 +261,37 @@ fi
 
 echo "== applying WireGuard configuration =="
 "$WG" setconf "$IFACE" "$SETCONF_FILE"
+# The converted copy holds the private key; WireGuard has it now.
+rm -f "$SETCONF_FILE"
 
 echo "== pinning endpoint routes outside the tunnel =="
-: > "$ENDPOINTS_FILE"
-
-if [ -n "${ORIG_DEV:-}" ]; then
-  "$WG" show "$IFACE" endpoints | while read -r peer endpoint; do
-    [ -z "$endpoint" ] && continue
-    [ "$endpoint" = "(none)" ] && continue
-
-    host="$(echo "$endpoint" | sed 's/:.*$//')"
-
-    case "$host" in
-      ""|0.0.0.0|*:*) continue ;;
-    esac
-
-    if [ -n "${ORIG_GW:-}" ]; then
-      echo "endpoint $host via $ORIG_GW dev $ORIG_DEV"
-      ip route replace "$host" via "$ORIG_GW" dev "$ORIG_DEV"
-    else
-      echo "endpoint $host dev $ORIG_DEV"
-      ip route replace "$host" dev "$ORIG_DEV"
-    fi
-
-    echo "$host" >> "$ENDPOINTS_FILE"
-  done
+if ! pin_endpoints; then
+  echo "ERROR: could not route every endpoint outside the tunnel"
+  exit 1
 fi
+
+# Kill switch routes go in before the tunnel routes, so there is no moment
+# where wg0 routes exist without the blocking routes behind them.
+if ks_enabled; then
+  echo "== kill switch routes =="
+  if ks_routes_apply; then
+    echo "blackhole routes behind the tunnel routes: on"
+  else
+    echo "ERROR: kill switch is on but its routes could not be added"
+    exit 1
+  fi
+fi
+
+V6_KEEP=""
+if grep -q '^6 ' "$ENDPOINTS_FILE" 2>/dev/null; then
+  V6_KEEP="$(cat "$DEV6FILE" 2>/dev/null || true)"
+  echo "IPv6 endpoint: IPv6 stays enabled on $V6_KEEP; other IPv6 destinations are blocked"
+  v6block_apply
+fi
+echo "$V6_KEEP" > "$IPV6_KEEP_FILE"
+
+echo "== disabling IPv6 outside the tunnel =="
+ipv6_disable_all "$V6_KEEP"
 
 echo "== assigning IP address =="
 while IFS= read -r addr || [ -n "$addr" ]; do
@@ -372,14 +337,44 @@ while IFS= read -r route || [ -n "$route" ]; do
   ip route replace "$route" dev "$IFACE"
 done < "$APPLIED_ROUTES_FILE"
 
+echo "== tunnel DNS =="
+if [ -s "$DNS_SERVERS_FILE" ]; then
+  if ! dns_apply; then
+    echo "WARNING: DNS IS NOT REDIRECTED: lookups may leave outside the tunnel"
+    START_NOTES="dns-not-redirected"
+  fi
+fi
+
+echo "== kill switch =="
+if ks_enabled; then
+  ks_routes_apply || true
+  if ! ipt4_usable; then
+    echo "Kill switch: on (routes only: this kernel has no usable iptables)"
+  elif ks_apply strict; then
+    echo "Kill switch: on (firewall and routes)"
+  else
+    echo "Kill switch: on (routes only: the firewall rules could not be added)"
+  fi
+else
+  ks_remove
+  echo "Kill switch: off"
+fi
+
+if [ "$FROM_WATCHDOG" != 1 ]; then
+  echo "== starting watchdog =="
+  "$HERE/exec-clean.sh" "$HERE/watchdog.sh" >>"$WATCHDOG_LOG" 2>&1 &
+  echo $! > "$WATCHDOG_PIDFILE"
+fi
+
 echo "== status =="
-"$WG" show "$IFACE"
+"$WG" show "$IFACE" | sed -E 's#^([[:space:]]*(private key|preshared key):).*#\1 (hidden)#'
 ip addr show "$IFACE"
 
 echo
 echo "== relevant routes =="
 ip route | grep -E "$IFACE|default" || ip route
 
+write_state up "$START_NOTES"
 echo
 echo "OK: WireGuard started"
 START_OK=1
