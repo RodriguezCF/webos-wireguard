@@ -1,6 +1,6 @@
 # WireGuard for LG webOS Homebrew
 
-[English](#english) · [Español](#español)
+[English](#english) · [Español](#español) · [Türkçe](#türkçe)
 
 ---
 
@@ -577,6 +577,8 @@ wireguard-tools/
 - Scripts and web files always check out with LF, also on Windows (`.gitattributes`)
 - New TV interface: status card, one Connect / Disconnect button, kill switch toggle, Details screen with leak test,
   QR code for the upload URL, language from the TV locale, 10-foot sizing
+- Turkish added to the TV app and the upload page, which now follows the browser language; outline icons on every
+  button
 
 ### 1.0.8
 
@@ -1245,6 +1247,8 @@ wireguard-tools/
 - Los scripts y archivos web se descargan siempre con LF, también en Windows (`.gitattributes`)
 - Nueva interfaz de TV: tarjeta de estado, un solo botón Conectar / Desconectar, interruptor de kill switch, pantalla
   Detalles con test de fugas, código QR para la URL de subida, idioma según la TV y tamaños para ver a distancia
+- Turco añadido a la app de la TV y a la página de subida, que ahora sigue el idioma del navegador; iconos de contorno
+  en todos los botones
 
 ### 1.0.8
 
@@ -1327,6 +1331,686 @@ Notas:
 ## Licencia
 
 El código específico de la app está publicado bajo la [licencia MIT](LICENSE). Los componentes de WireGuard incluidos conservan sus propias licencias:
+
+```text
+wireguard-go/LICENSE
+wireguard-tools/COPYING
+```
+
+---
+
+# Türkçe
+
+Homebrew Channel kullanan, root erişimli LG webOS TV'ler için bir WireGuard istemcisi.
+
+Bu proje, LG webOS üzerinde bir WireGuard VPN tünelini kurabilen, yapılandırabilen, başlatıp durdurabilen ve izleyebilen basit bir webOS uygulaması sunar. LG webOS'un fabrika çekirdekleri genellikle WireGuard çekirdek modülünü içermediği için WireGuard'ı `wireguard-go` aracılığıyla userspace'te çalıştırır.
+
+Uygulama, Homebrew Channel kurulu, root erişimli TV'ler için tasarlanmıştır.
+
+---
+
+## Özellikler
+
+- `wireguard-go` ile userspace WireGuard tüneli
+- Hazır gelen `wg`, `wireguard-go` ve `wg-upload` ikili dosyaları
+- TV kullanımına uygun webOS arayüzü
+- İngilizce, İspanyolca ve Türkçe arayüz
+- Elle çalıştırılan **Kur / güncelle** akışı
+- Uygulama açılışında otomatik payload kurulumu yok
+- `wg0.conf` için geçici web yükleme sunucusu
+- Rastgele bir erişim kodu ve hatalı deneme kilidiyle korunan, süre sınırlı yapılandırma yüklemesi
+- Canlı durum kartıyla tek düğmeli Bağlan / Bağlantıyı kes
+- Tünel DNS'i: VPN açıkken TV'nin çözümleyicisi yapılandırmanızdaki DNS sunucularını kullanır
+- İsteğe bağlı kill switch (varsayılan olarak kapalı)
+- Tüm ağ arayüzlerinde IPv6 sızıntı koruması
+- TV bekleme modu, Wi-Fi yeniden bağlanmaları ve ağ değişikliklerinden sonra tüneli onaran watchdog
+- Ayrıntılar ekranında sızıntı testi, rotalar, yapılandırma ve günlük
+- Yeniden denemeli, isteğe bağlı açılışta otomatik başlatma
+- Runtime kaldırma işlemi
+
+---
+
+## Neden userspace WireGuard?
+
+Normal Linux sistemlerinde WireGuard genellikle bir çekirdek modülü olarak çalışır.
+
+LG webOS TV'lerde WireGuard çekirdek modülü fabrika çekirdeğinde normalde bulunmaz. Bu nedenle bu proje şunları kullanır:
+
+- WireGuard arayüzünü userspace'te oluşturmak için `wireguard-go`
+- tüneli yapılandırmak için `wireguard-tools` içindeki `wg`
+- userspace'ten oluşturulan bir TUN arayüzü
+
+Bu sayede özel bir webOS çekirdeği derlemeden veya kurmadan WireGuard çalıştırmak mümkün olur.
+
+---
+
+## Gereksinimler
+
+- Root erişimli LG webOS TV
+- Kurulu Homebrew Channel
+- Kullanılabilir Homebrew root servisi
+- TV'de `/dev/net/tun` desteği
+- Uyumlu CPU mimarisi
+
+Mevcut sürümdeki hazır ikili dosyalar şu hedef için derlenmiştir:
+
+```text
+linux/armv7 (32-bit ARM)
+```
+
+TV'nizin mimarisini şu komutla kontrol edin:
+
+```sh
+uname -m
+```
+
+Hazır ARMv7 ikili dosyaları, desteklenen 64 bit LG TV'lerde de çalışır.
+
+---
+
+## Kurulum
+
+### 1. IPK'yı indirin veya derleyin
+
+Sürüm paketi:
+
+```text
+com.github.cfernande1470.wireguard_1.1.0_all.ipk
+```
+
+Elle paketlemek için:
+
+```sh
+make package
+```
+
+Paketleme için LG'nin `@webos-tools/cli` paketinde ya da webOSBrew'un `ares-cli-rs` aracında bulunan
+`ares-package` gerekir. `PATH` üzerinde bulunmuyorsa `ARES_PACKAGE=/path/to/ares-package` değişkenini ayarlayın.
+Hazır ARMv7 ikili dosyaları hem 32 bit hem 64 bit TV'lerde çalıştığı için paket mimarisi zorunlu olarak `all`
+yapılır.
+
+Çıktı:
+
+```text
+dist/com.github.cfernande1470.wireguard_1.1.0_all.ipk
+```
+
+### 2. Homebrew Channel ile kurun
+
+IPK'yı TV'nize kopyalayın veya yükleyin ve Homebrew Channel'dan kurun.
+
+### 3. Uygulamayı açın
+
+Uygulamayı başlattıktan sonra **Kur** düğmesine basın (bileşenler hazırlanana kadar ana düğmede Kur yazar;
+sonraki güncellemeler **Ayrıntılar > Kur / güncelle** üzerinden yapılır).
+
+Bu işlem kalıcı durumu şu dizinde hazırlar:
+
+```text
+/var/lib/webosbrew/wireguard
+```
+
+Paketlenmiş ikili dosyalar ve betikler uygulama dizininin içinde kalır. Durum dizini yalnızca yapılandırmayı,
+günlükleri, çalışma zamanı dosyalarını ve paketlenmiş payload'a giden sembolik bağlantıları içerir; böylece
+güncellemeler ikili dosyalar çoğaltılmadan etkili olur. Uygulama bu durumu otomatik olarak hazırlamaz; bu bilinçli
+bir tercihtir.
+
+---
+
+## İlk kurulum
+
+1. TV'de WireGuard uygulamasını açın.
+2. **Kur** düğmesine basın.
+3. **Yapılandırma yükle** düğmesine basın.
+4. QR kodunu tarayın veya gösterilen URL'yi aynı LAN'daki bir bilgisayardan ya da telefondan açın.
+5. Gösterilen erişim kodunu girin.
+6. `wg0.conf` dosyanızı yükleyin.
+7. TV'ye dönün ve yükleme penceresini kapatın.
+8. **Bağlan** düğmesine basın.
+9. Tüneli doğrulamak için **Ayrıntılar > Sızıntı testi** ekranını açın.
+
+---
+
+## TV uygulaması
+
+Ana ekranda yalnızca şunlar bulunur:
+
+- bir durum kartı: Bağlı, Bağlı değil, Yeniden bağlanıyor, VPN kapalı: korumasız, Kill Switch engelliyor veya
+  Bağlantı kurulamadı; ayrıca sunucu, son el sıkışmadan (handshake) bu yana geçen süre, alınan ve gönderilen veri ile
+  genel IPv4 adresi. Uygulama görünür olduğu sürece 5 saniyede bir yenilenir, gizliyken duraklar
+- **Bağlan / Bağlantıyı kes** (açılışta odak buradadır)
+- **Açılışta başlat** ve **Kill Switch** anahtarları
+- **Yapılandırma yükle** ve **Ayrıntılar**
+
+**Ayrıntılar** ekranında (Geri tuşu ana ekrana döner) **Sızıntı testi**, **Rotalar**, **Yapılandırma** (anahtarlar
+REDACTED olarak kalır), **Günlük**, **Kur / güncelle**, **Kaldır** (onay ister, odak önce İptal üzerindedir) ve metin
+çıktısı bulunur.
+
+Dil, TV'nin yerel ayarını izler (`es-*` için İspanyolca, `tr-*` için Türkçe, diğer durumlarda İngilizce). Kumandayla
+gezinmede oklar, OK ve Geri tuşları kullanılır.
+
+---
+
+## Örnek yapılandırma
+
+Güvenli bir örnek yapılandırma şurada bulunur:
+
+```text
+examples/wg0.example.conf
+```
+
+Bunu kopyalayın, yer tutucu anahtarları ve endpoint'i değiştirin, ardından gerçek `wg0.conf` dosyanızı uygulamadan
+yükleyin.
+
+Gerçek WireGuard yapılandırma dosyalarını commit etmeyin. Bu dosyalar özel anahtarlar ve gizli VPN bilgileri içerir.
+
+Örnek:
+
+```ini
+[Interface]
+PrivateKey = REPLACE_WITH_CLIENT_PRIVATE_KEY
+Address = 10.10.10.2/32
+
+[Peer]
+PublicKey = REPLACE_WITH_SERVER_PUBLIC_KEY
+AllowedIPs = 0.0.0.0/0
+Endpoint = vpn.example.invalid:51820
+PersistentKeepalive = 25
+```
+
+---
+
+## Yapılandırmanın işlenmesi
+
+Yükleyici, normal `wg-quick` biçimindeki yapılandırma dosyalarını kabul eder ve bunları `wg setconf` için dönüştürür.
+
+İşlenen alanlar:
+
+```text
+PrivateKey
+ListenPort
+FwMark
+PublicKey
+PresharedKey
+AllowedIPs
+Endpoint
+PersistentKeepalive
+Address
+```
+
+Yok sayılan alanlar:
+
+```text
+MTU
+Table
+SaveConfig
+PreUp
+PostUp
+PreDown
+PostDown
+```
+
+`DNS` ayrı olarak `/var/lib/webosbrew/wireguard/conf/dns` dosyasına kaydedilir (bkz. Tünel DNS'i).
+
+`Address` ayıklanır ve ayrı olarak şuraya kaydedilir:
+
+```text
+/var/lib/webosbrew/wireguard/conf/address
+```
+
+Dönüştürülmüş WireGuard yapılandırması şu adla saklanır:
+
+```text
+/var/lib/webosbrew/wireguard/conf/wg0.conf
+```
+
+Yüklenen her yapılandırmanın bir yedeği şurada saklanır:
+
+```text
+/var/lib/webosbrew/wireguard/uploads
+```
+
+Yüklenen `MTU` değerleri yükleyici tarafından yok sayılır. Başlatma betiği varsayılan olarak `1420` tünel MTU'sunu
+kullanır.
+
+---
+
+## Tam tünel yönlendirmesi
+
+Yapılandırmanız şunu içeriyorsa:
+
+```ini
+AllowedIPs = 0.0.0.0/0
+```
+
+başlatma betiği bunu iki parçalı varsayılan rotaya dönüştürür:
+
+```text
+0.0.0.0/1
+128.0.0.0/1
+```
+
+Bu yöntem varsayılan rotayı doğrudan değiştirmekten kaçınır ve webOS'ta genellikle daha iyi çalışır.
+
+VPN endpoint'i mevcut varsayılan rota kullanılarak tünelin dışında sabitlenir; böylece WireGuard, tünel başladıktan sonra da sunucuya ulaşabilir.
+Ana bilgisayar adı (hostname) olarak verilen endpoint'ler başlatma sırasında TV'nin özgün çözümleyicisiyle, tünel
+çalışmayı bıraktığında ise watchdog tarafından yeniden çözümlenir; böylece değişen bir dinamik DNS adresi algılanır.
+
+---
+
+## Tünel DNS'i
+
+VPN açıkken TV'nin çözümleyicisi yapılandırmanızdaki `DNS =` sunucularını kullanır:
+
+- her IPv4 DNS sunucusu, LAN içinde olsa bile `wg0` üzerinden bir host rotası alır
+- `/etc/resolv.conf` arkasındaki çözümleyici dosyası (yeni webOS sürümlerinde `/var/lib/misc/resolv.conf`) bir bind
+  mount ile değiştirilir (webOS kök dosya sistemi salt okunurdur). Bind mount başarısız olursa dosya yeniden yazılır. Özgün dosya `run/` altına kaydedilir ve
+  durdurmada, başarısız bir başlatmada ve kaldırmada birebir geri yüklenir
+- `DNS =` satırındaki arama alan adları korunur; IPv6 tünellenmediği için IPv6 DNS sunucuları yok sayılır
+- ağ yöneticisi dosyayı yeniden yazdığında (örneğin uyandıktan sonra) watchdog yönlendirmeyi yeniden uygular
+
+DNS sunucuları `conf/dns` dosyasından (yükleyici yazar), `conf/wg0.conf` içindeki bir `DNS =` satırından ya da eski bir
+sürümle yüklenmiş yapılandırmalar için `uploads/` içindeki en yeni dosyadan alınır. Yapılandırmada hiç DNS sunucusu
+yoksa TV normal çözümleyicisini kullanmaya devam eder ve uygulamanın durum kartı özel bir şey göstermez, ancak
+**Sızıntı testi** bu konuda uyarır.
+
+---
+
+## Kill switch
+
+Kill switch isteğe bağlıdır ve varsayılan olarak kapalıdır. **Kill Switch** anahtarıyla açın; ayar
+`conf/killswitch` dosyasında saklanır.
+
+Açık olduğunda ve VPN'in çalışıyor olması gerektiğinde iki düzeyde çalışır:
+
+- **Rotalar (her zaman).** `blackhole 0.0.0.0/1` ve `blackhole 128.0.0.0/1` (ayrıca IPv6 için `unreachable ::/1` ve
+  `8000::/1`, her tünel DNS sunucusu için de bir `/32` blackhole) 4000 metrikle tünel rotalarının arkasında durur.
+  `wg0` var olduğu sürece onun rotaları (metrik 0) kazanır; `wg0` kaybolduğu anda (örneğin `wireguard-go` sonlanırsa
+  veya bağlantı yeniden başlarsa) çekirdek bu rotaları siler ve hiç boşluk kalmadan blackhole rotaları devreye girer.
+  LAN alt ağları ve sabitlenmiş endpoint rotaları daha spesifik olduğu için LAN ve WireGuard el sıkışması çalışmaya
+  devam eder. Bu yöntem netfilter gerektirmez; bu nedenle çekirdeğinde netfilter bulunmayan TV'lerde kill switch budur
+  (bu TV'lerde `iptables` ikili dosyası vardır ama "Table does not exist" yanıtını verir). Anahtar bu durumda
+  **Kill Switch (rotalar)** olarak görünür.
+- **Güvenlik duvarı (iptables çalışıyorsa).** `OUTPUT` zincirinden ayrı bir `WG_KILLSWITCH` zincirine atlanır
+  (iptables ve varsa ip6tables). Bu zincir loopback'e, `wg0`'a, DHCP'ye, fiziksel arayüzlerin LAN alt ağlarına,
+  multicast ve broadcast trafiğine ve her endpoint IP'si ile portuna giden UDP'ye izin verir. `wg0` dışındaki DNS ve
+  geri kalan her şey düşürülür. Başka hiçbir zincire veya kurala dokunulmaz: yalnızca bu zincir ve tek atlama kuralı
+  eklenip kaldırılır.
+
+Diğer ayrıntılar:
+
+- Tünel kapalıyken `/etc/resolv.conf` yalnızca tünel DNS sunucularını göstermeye devam eder, hiçbir zaman LAN
+  yönlendiricisine geri dönmez ve bu sunucular blackhole'a alınmıştır; böylece sorgular sızmak yerine başarısız olur.
+- Otomatik başlatma sırasında önce endpoint'ler çözümlenip sabitlenir, ardından ilk başlatma denemesinden önce rotalar,
+  DNS yönlendirmesi ve (iptables varsa) bir açılış zinciri eklenir. Endpoint ana bilgisayar adları
+  `run/endpoint-cache` içinde önbelleğe alınır; böylece kill switch çözümleyicinin üst sunucusunu engellese bile bir
+  başlatma veya onarım sunucuyu yine bulabilir.
+- Tünel başarısız olursa trafik engelli kalır ve durum kartı, tünel yeniden çalışana, siz **Bağlantıyı kes** düğmesine
+  basana ya da kill switch'i kapatana kadar **Kill Switch engelliyor** gösterir.
+- **Bağlantıyı kes**, **Kaldır** ve anahtarı kapatmak, rotaları ve zinciri tamamen kaldırır.
+- Netfilter olmadan, TV'nin kendi DNS proxy'siyle doğrudan konuşan uygulamalar (`/etc/resolv.conf` dosyasını okumak
+  yerine) tünel kapalıyken LAN yönlendiricisine yine ulaşabilir; rotalar porta göre filtreleme yapamaz.
+
+---
+
+## Watchdog, bekleme modu ve ağ değişiklikleri
+
+`start.sh` küçük bir watchdog başlatır (`scripts/watchdog.sh`, PID `run/watchdog.pid` içinde, günlük
+`run/watchdog.log` içinde); `stop.sh` onu durdurur. Watchdog her 5 saniyede bir, birkaç `ip` ve `wg` çağrısıyla
+şunları kontrol eder:
+
+- `wg0` dışındaki mevcut varsayılan rota: ağ geçidi veya arayüz değiştiğinde (Wi-Fi ve Ethernet) ya da sabitlenmiş
+  endpoint rotası kaybolduğunda endpoint rotaları yeniden sabitlenir
+- devre dışı bırakılmış IPv6, DNS yönlendirmesi ve kill switch rotaları ile kuralları
+- son el sıkışma: ağ açıkken 3 dakikadan eskiyse tünelden bir yoklama paketi gönderir, ana bilgisayar adlı
+  endpoint'leri yeniden çözümler ve rotaları onarır
+- `wireguard-go` sonlanmışsa tüneli en fazla dakikada bir yeniden başlatır
+
+Tünel onarılamazsa:
+
+- kill switch açıkken trafik engelli kalır ve watchdog denemeye devam eder
+- kill switch kapalıyken, 6 başarısız turdan sonra (yaklaşık 40 saniye) tüm trafiği yakalayan VPN rotalarını kaldırır
+  ve TV'nin internet erişimi sürsün diye normal çözümleyiciyi geri yükler. Günlükte
+  `VPN DOWN ... TRAFFIC IS NOT PROTECTED` yazar ve durum kartı **VPN kapalı: korumasız** gösterir. Her 15 saniyede
+  bir denemeye devam eder ve bir el sıkışma başarılı olur olmaz VPN rotalarını geri koyar.
+
+Bu, 1.0.x sürümlerindeki bekleme modu sorununu giderir: VPN açıkken TV kapatıldığında bağlantının yeniden başlaması
+endpoint rotasını siliyor, şifreli paketler `wg0`'ın kendisine yönlendiriliyor ve VPN durdurulup yeniden
+başlatılana kadar hiçbir şey çalışmıyordu.
+
+---
+
+## IPv6 durumu
+
+WireGuard yapılandırmasındaki IPv6 rotaları ve IPv6 adresleri şu anda yok
+sayılır. Tünel etkinken IPv6, loopback ve `wg0` dışındaki tüm arayüzlerde (ve
+sonradan ortaya çıkan arayüzler için `default` şablonunda) devre dışı bırakılır.
+Her arayüzün özgün değeri kaydedilir ve WireGuard durduğunda veya bir başlatma
+başarısız olduğunda birebir geri yüklenir. Bir arayüz yeniden oluşturulduğunda
+(örneğin bekleme modundan sonra) watchdog IPv6'yı yeniden devre dışı bırakır.
+
+### IPv6 endpoint'leri
+
+IPv6 adresli bir endpoint (`Endpoint = [2001:db8::1]:51820` ya da yalnızca IPv6'ya çözümlenen bir ana bilgisayar adı)
+desteklenir. Endpoint, mevcut IPv6 varsayılan rotası üzerinden bir `/128` rotası alır ve TV'nin sunucuya ulaşmak için
+IPv6'ya ihtiyacı olduğundan IPv6 yalnızca o arayüzde etkin kalır. Diğer IPv6 trafiğinin tünel dışına çıkmasını önlemek
+için `::/1` ve `8000::/1` için `unreachable` rotaları eklenir (link-local ve multicast çalışmaya devam eder) ve kill
+switch IPv6 üzerinden yalnızca endpoint'e izin verir. IPv6 endpoint'i kullanırken Wi-Fi ile Ethernet arasında geçiş
+yapmak yeniden bağlanmayı gerektirir. Tünel içindeki IPv4 her zamanki gibi çalışır.
+
+---
+
+## Otomatik başlatma
+
+Uygulama, WireGuard için otomatik başlatmayı etkinleştirebilir.
+
+Etkinleştirildiğinde şunu oluşturur:
+
+```text
+/var/lib/webosbrew/init.d/90-wireguard
+```
+
+Bu, paketlenmiş `boot.sh` dosyasına giden bir sembolik bağlantıdır. Açılışta betik, bir varsayılan rota için en fazla
+60 saniye bekler ve ardından WireGuard'ı başlatır. Başarısız bir başlatma, giderek uzayan aralarla (10, 20, 40 ve 80
+saniye) en fazla 5 kez yeniden denenir. Çıktı `run/autostart.log` dosyasına, sonuç `run/boot-result` dosyasına
+yazılır ve uygulama açıldığında son açılış sonucunu gösterir. Uygulama kaldırılırsa bağlantı çalıştırılamaz hale gelir
+ve Homebrew hook çalıştırıcısı onu atlar.
+
+---
+
+## Kaldırma
+
+**Ayrıntılar > Kaldır** onay ister, WireGuard'ı durdurur, kill switch zincirini kaldırır, DNS ve IPv6 ayarlarını geri
+yükler ve şunları siler:
+
+```text
+/var/lib/webosbrew/wireguard
+/var/lib/webosbrew/init.d/90-wireguard
+/var/run/wireguard/wg0.sock
+```
+
+Bundan sonra uygulamayı Homebrew Channel'dan kaldırabilirsiniz.
+
+---
+
+## Derleme notları
+
+### `wg-upload` derleme
+
+```sh
+cd uploader
+
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+  go build -trimpath -ldflags="-s -w" \
+  -o ../app/com.github.cfernande1470.wireguard/payload/wireguard/bin/wg-upload \
+  ./wg-upload.go
+
+cd ..
+```
+
+### `wireguard-go` derleme
+
+```sh
+cd wireguard-go
+
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 \
+  go build -trimpath -ldflags="-s -w" \
+  -o ../app/com.github.cfernande1470.wireguard/payload/wireguard/bin/wireguard-go .
+
+cd ..
+```
+
+### ARMv7 için derleme
+
+Desteklenen tüm TV'ler için:
+
+```sh
+GOOS=linux GOARCH=arm GOARM=7 CGO_ENABLED=0 go build ...
+```
+
+Hem 32 bit hem 64 bit LG TV'leri desteklemek için hazır ikili dosyaların tümü 32 bit ARM olarak kalmalıdır.
+
+İkili dosyaları şu komutla kontrol edin:
+
+```sh
+file app/com.github.cfernande1470.wireguard/payload/wireguard/bin/*
+```
+
+---
+
+## Sorun giderme
+
+### 1.1.0 sürümüne güncelleme
+
+Bağlantıyı kesin, yeni IPK'yı kurun, uygulamayı açın ve **Ayrıntılar > Kur / güncelle** işlemini bir kez çalıştırın.
+Kurulum betiği eski runtime'ı durdurur ve yeni betiklere bağlantı verir. Yükleyicinin DNS sunucularını `conf/dns`
+içine kaydetmesini istiyorsanız yapılandırmayı yeniden yükleyin; aksi halde bu sunucular `uploads/` içindeki en yeni
+dosyadan okunur.
+
+### 1.0.1 sürümünden güncelleme
+
+**Kur / güncelle** işlemini bir kez çalıştırın. Kurulum betiği eski runtime'ı durdurur, kopyalanmış payload'ı siler,
+yerine paketlenmiş dosyalara giden sembolik bağlantılar koyar ve mevcut yapılandırmayı korur.
+
+### `ERROR luna-call`
+
+Bu genellikle Homebrew root servisinin başarısız olduğu veya komutu reddettiği anlamına gelir.
+
+Homebrew Channel'ın ve root servisinin çalıştığını kontrol edin.
+
+TV'ye SSH ile bağlanıp şunu çalıştırın:
+
+```sh
+luna-send -n 1 'luna://org.webosbrew.hbchannel.service/exec' '{"command":"id; echo OK"}'
+```
+
+### `interface was not created`
+
+TUN desteğini kontrol edin:
+
+```sh
+ls -l /dev/net/tun
+```
+
+### VPN başlıyor ama trafik tünelden geçmiyor
+
+Uygulamada **Ayrıntılar > Sızıntı testi**, **Rotalar** ve **Günlük** ekranlarını açın.
+
+Şunları kontrol edin:
+
+```sh
+ip route
+ip addr show wg0
+wg show wg0
+```
+
+### Yüklenen yapılandırma çalışıyor ama DNS değişmiyor
+
+Yapılandırmada bir `DNS =` satırı bulunduğunu kontrol edin ve **Ayrıntılar > Sızıntı testi** işlemini çalıştırın.
+**Günlük** ekranında `resolver redirected with a bind mount` satırı ya da `DNS IS NOT REDIRECTED` uyarısı görünür.
+TV'de:
+
+```sh
+cat /etc/resolv.conf
+cat /var/lib/webosbrew/wireguard/run/dns-mode
+ip route get <dns-server>
+```
+
+### Bekleme modundan sonra internet yok
+
+Watchdog bunu birkaç saniye içinde onarmalıdır. **Ayrıntılar > Günlük** (`watchdog.log`) ekranına bakın.
+**Bağlantıyı kes** ve ardından **Bağlan** düğmesine basmak her şeyi yine sıfırlar.
+
+---
+
+## Güvenlik notları
+
+Özel anahtarınız TV'de şurada saklanır:
+
+```text
+/var/lib/webosbrew/wireguard/conf/wg0.conf
+```
+
+Yükleme sunucusu sekiz karakterlik rastgele bir erişim kodu kullanır. Bir başarılı yüklemeden, beş hatalı koddan veya
+on dakikadan sonra durur.
+
+**Yükleme düz HTTP üzerinden yapılır.** Özel anahtarınız dahil yapılandırma, LAN üzerinden şifrelenmeden iletilir. O
+ağdaki trafiği izleyebilen herkes (paylaşılan bir Wi-Fi, ele geçirilmiş bir cihaz) anahtarı okuyabilir. Yalnızca
+güvendiğiniz kendi ev ağınızda kullanın ve şüpheniz varsa anahtarı yenileyin. Yükleyici yalnızca yerel adresli
+istemcilere yanıt verir (RFC 1918, IPv6 ULA, link-local, loopback); diğer adreslerden gelen istekler `403` alır. TV'deki
+yükleme penceresi bu uyarıyı kısa biçimde gösterir.
+
+Gerçek `wg0.conf` dosyalarını veya özel veri içeren günlükleri yayımlamayın.
+
+---
+
+## Proje yapısı
+
+```text
+app/com.github.cfernande1470.wireguard/
+  appinfo.json
+  index.html
+  css/
+  js/
+  lib/
+  payload/wireguard/
+    install.sh
+    bin/
+      wg
+      wireguard-go
+      wg-upload
+    scripts/
+      lib.sh          shared helpers (DNS, IPv6, kill switch, endpoint routes)
+      start.sh
+      stop.sh
+      watchdog.sh     repairs the tunnel after standby and network changes
+      killswitch.sh   enable | disable | status
+      summary.sh      status for the app
+      leaktest.sh
+      status.sh
+      upload-start.sh
+      upload-stop.sh
+      autostart.sh
+      boot.sh
+      exec-clean.sh
+      uninstall.sh
+
+examples/
+  wg0.example.conf
+
+uploader/
+  wg-upload.go
+
+wireguard-go/
+wireguard-tools/
+```
+
+---
+
+## Değişiklik günlüğü
+
+### 1.1.0
+
+- Tünel DNS'i: VPN açıkken TV'nin çözümleyicisi yapılandırmadaki DNS sunucularını `wg0` üzerinden kullanır; durdurmada
+  birebir geri yüklenir
+- İsteğe bağlı kill switch (varsayılan olarak kapalı): tünel rotalarının arkasında blackhole rotaları, iptables'ın
+  çalıştığı yerlerde ek olarak ayrı bir `WG_KILLSWITCH` zinciri
+- VPN açıkken tüm ağ arayüzlerinde IPv6 devre dışı; her özgün değer geri yüklenir
+- Watchdog: VPN açıkken TV bekleme modundan sonra internetin gitmesini düzeltir, Wi-Fi ve Ethernet değişikliklerini
+  izler, ana bilgisayar adlı endpoint'leri yeniden çözümler, tünel onarılamadığında ve kill switch kapalıyken normal
+  ağa döner (açıkça korumasız olarak işaretlenir)
+- IPv6 endpoint'leri destekleniyor
+- Otomatik başlatma en fazla 5 kez yeniden dener; uygulama son açılış sonucunu gösterir
+- Yükleyici yalnızca yerel ağdaki istemcileri kabul eder ve DNS sunucularını kaydeder; düz HTTP kullanımı belgelendi
+- Betikler ve web dosyaları Windows'ta da her zaman LF ile checkout edilir (`.gitattributes`)
+- Yeni TV arayüzü: durum kartı, tek Bağlan / Bağlantıyı kes düğmesi, kill switch anahtarı, sızıntı testi içeren
+  Ayrıntılar ekranı, yükleme URL'si için QR kodu, TV yerel ayarına göre dil, uzaktan izlemeye uygun (10-foot)
+  boyutlandırma
+- TV uygulamasına ve artık tarayıcı dilini izleyen yükleme sayfasına Türkçe eklendi; tüm düğmelerde çizgi (outline)
+  simgeler
+
+### 1.0.8
+
+- Eski webOS motorlarında yanıt vermeyen arayüz, ES5 değişken tanımlamaları kullanılarak düzeltildi (teşekkürler @mastrogippo, PR #8)
+- webOS 3.9.3 üzerinde iki kullanıcı tarafından kurulum, yapılandırma yükleme, VPN başlatma/durdurma, root durumu ve otomatik başlatma dahil çalıştığı doğrulandı
+- Kararlı sürüm, 1.0.8-rc.1 olarak test edilen IPK'nın aynısını kullanır; resmi katalogdaki en düşük sürüm webOS 5.0 olarak kalır
+
+### 1.0.7
+
+- WireGuard ve yükleme sunucusu başlatılmadan önce servisten devralınan dosya tanımlayıcıları kapatıldı
+- Arka plan daemon'larının, servis sonlandıktan sonra Homebrew Luna bağlantılarını açık tutması engellendi
+- Daemon PID takibi, günlükler ve yükleme sunucusunun başlatma ayarları korundu
+
+### 1.0.6
+
+- Proje bağlantıları ve bakımcı bilgisi RodriguezCF olarak güncellendi
+- TV arayüzü sadeleştirildi
+
+### 1.0.5
+
+Düzeltilenler:
+
+- IPv6 trafiğinin yalnızca IPv4 kullanan VPN yapılandırmalarını atlatması engellendi
+- Özgün IPv6 durumunun tünel yeniden başlatmalarında ve başarısız başlatmalarda korunup geri yüklenmesi sağlandı
+- Üst üste binen tünel işlemlerini önlemek için başlatma ve durdurma işlemleri sıraya alındı
+- Kısa ömürlü başlatıcısı yerine uzun ömürlü `wireguard-go` işlemi takip edilmeye başlandı
+- Otomatik başlatmada ağ için en fazla 60 saniye beklenmesi ve zaman aşımında açık bir hata bildirilmesi sağlandı
+
+### 1.0.3
+
+Düzeltilenler:
+
+- Ok tuşları ve OK/Enter için açık, beş yönlü kumanda gezinmesi eklendi
+- Yükleme penceresi için Geri tuşu desteği eklendi
+
+### 1.0.2
+
+Değişenler:
+
+- İkili dosyalar ve betikler uygulama dizininde tutuluyor; payload kopyalanmak yerine bunlara bağlantı veriliyor
+- Uygulama kaldırıldığında VPN'in başlatılmaya devam etmemesi için sembolik bağlantılı bir açılış hook'u kullanılıyor
+- `/var/lib/webosbrew/wireguard` altında yalnızca yapılandırma, günlükler ve çalışma zamanı durumu tutuluyor
+- Dört haneli PIN yerine sekiz karakterlik rastgele bir erişim kodu kullanılıyor
+- Yükleme sunucusu bir başarılı yüklemeden veya on dakikadan sonra duruyor, beş hatalı koddan sonra kilitleniyor
+- Sürümler, özel bir IPK oluşturucu yerine standart `ares-package` aracıyla paketleniyor
+
+### 1.0.1
+
+Düzeltilenler:
+
+- Uygulama ve paket tutarlı biçimde `com.github.cfernande1470.wireguard` olarak yeniden adlandırıldı
+- Hazır gelen tüm çalıştırılabilir dosyalar 32 bit ARMv7 uyumluluğu için yeniden derlendi
+- MIT lisansı ve yeniden üretilebilir derleme, paketleme ve sürüm doğrulama betikleri eklendi
+
+### 1.0.0
+
+İlk kararlı sürüm.
+
+Eklenenler:
+
+- WireGuard için LG webOS Homebrew uygulaması
+- `wireguard-go` ile userspace WireGuard desteği
+- Hazır gelen `wg`, `wireguard-go` ve `wg-upload`
+- Elle çalıştırılan Kur / güncelle akışı
+- Uygulama açılışında otomatik payload kurulumu yok
+- İki dilli arayüz: İngilizce ve İspanyolca
+- İki dilli yükleme web sunucusu
+- PIN korumalı `wg0.conf` yüklemesi
+- Başlatma, durdurma, durum, rotalar, yapılandırma ve günlük işlemleri
+- Açılışta isteğe bağlı otomatik başlatma
+- Runtime kaldırma işlemi
+
+Notlar:
+
+- WireGuard çekirdek modülü LG webOS fabrika çekirdeklerinde normalde bulunmadığı için WireGuard userspace'te çalışır.
+- Mevcut hazır ikili dosyalar 32 bit `linux/armv7` için derlenmiştir.
+- IPv6 ve DNS işleme bu sürümde uygulanmamıştır.
+
+---
+
+## Lisans
+
+Uygulamaya özgü kod [MIT Lisansı](LICENSE) altında lisanslanmıştır. Hazır gelen WireGuard bileşenleri kendi lisanslarını korur:
 
 ```text
 wireguard-go/LICENSE
