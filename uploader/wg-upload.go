@@ -10,6 +10,7 @@ import (
 	"html"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -60,7 +61,7 @@ func main() {
 
 	server = &http.Server{
 		Addr:              ":8088",
-		Handler:           mux,
+		Handler:           localClientsOnly(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
@@ -74,6 +75,25 @@ func main() {
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatal(err)
 	}
+}
+
+// The upload travels as plain HTTP, so only clients on the local network
+// (RFC 1918, IPv6 ULA, link-local and loopback addresses) are served.
+func localClientsOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host, _, err := net.SplitHostPort(r.RemoteAddr)
+		ip := net.ParseIP(host)
+		if err != nil || ip == nil || !isLocalClient(ip) {
+			log.Printf("rejected request from non-local address %s", r.RemoteAddr)
+			http.Error(w, "Forbidden: local network clients only", http.StatusForbidden)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isLocalClient(ip net.IP) bool {
+	return ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast()
 }
 
 func randomToken() string {
@@ -318,6 +338,7 @@ const indexHTML = `<!doctype html>
     <div class="topbar" aria-label="Language selector">
       <button id="langEn" class="lang-button" type="button" onclick="setLanguage('en')">🇬🇧 English</button>
       <button id="langEs" class="lang-button" type="button" onclick="setLanguage('es')">🇪🇸 Español</button>
+      <button id="langTr" class="lang-button" type="button" onclick="setLanguage('tr')">🇹🇷 Türkçe</button>
     </div>
 
     <section class="card">
@@ -365,7 +386,7 @@ const indexHTML = `<!doctype html>
         fileLabel: "wg0.conf file",
         fileHint: 'Use your normal <code>wg0.conf</code> or <code>wg-quick</code> config.',
         submit: "Upload configuration",
-        steps: "After uploading it, return to the app and press <b>Stop VPN</b>, then <b>Start VPN</b>."
+        steps: "After uploading it, return to the app and press <b>Connect</b>. If it is already connected, press <b>Disconnect</b> first."
       },
       es: {
         title: "Subir configuración WireGuard",
@@ -375,16 +396,30 @@ const indexHTML = `<!doctype html>
         fileLabel: "Archivo wg0.conf",
         fileHint: 'Usa tu <code>wg0.conf</code> normal o una configuración <code>wg-quick</code>.',
         submit: "Subir configuración",
-        steps: "Después de subirla, vuelve a la app y pulsa <b>Parar VPN</b>, y luego <b>Arrancar VPN</b>."
+        steps: "Después de subirla, vuelve a la app y pulsa <b>Conectar</b>. Si ya está conectada, pulsa antes <b>Desconectar</b>."
+      },
+      tr: {
+        title: "WireGuard yapılandırmasını yükle",
+        subtitle: 'Standart bir <code>wg-quick</code> yapılandırma dosyası yükleyin. TV onu otomatik olarak dönüştürecek.',
+        pinLabel: "TV'de gösterilen erişim kodu",
+        pinHint: "WireGuard uygulamasında görüntülenen erişim kodunu girin.",
+        fileLabel: "wg0.conf dosyası",
+        fileHint: 'Normal <code>wg0.conf</code> dosyanızı veya <code>wg-quick</code> yapılandırmanızı kullanın.',
+        submit: "Yapılandırmayı yükle",
+        steps: "Yükledikten sonra uygulamaya dönün ve <b>Bağlan</b> düğmesine basın. Zaten bağlıysa önce <b>Bağlantıyı kes</b> düğmesine basın."
       }
     };
 
     let currentLang = "en";
 
     try {
-      currentLang = localStorage.getItem("wgUploadLanguage") || "en";
+      currentLang = localStorage.getItem("wgUploadLanguage") || "";
     } catch (e) {
-      currentLang = "en";
+      currentLang = "";
+    }
+
+    if (!currentLang) {
+      currentLang = String(navigator.language || "en").toLowerCase().slice(0, 2);
     }
 
     if (!I18N[currentLang]) {
@@ -415,6 +450,7 @@ const indexHTML = `<!doctype html>
 
       const enBtn = document.getElementById("langEn");
       const esBtn = document.getElementById("langEs");
+      const trBtn = document.getElementById("langTr");
 
       if (enBtn) {
         enBtn.classList.toggle("active", currentLang === "en");
@@ -424,6 +460,11 @@ const indexHTML = `<!doctype html>
       if (esBtn) {
         esBtn.classList.toggle("active", currentLang === "es");
         esBtn.setAttribute("aria-pressed", currentLang === "es" ? "true" : "false");
+      }
+
+      if (trBtn) {
+        trBtn.classList.toggle("active", currentLang === "tr");
+        trBtn.setAttribute("aria-pressed", currentLang === "tr" ? "true" : "false");
       }
     }
 
@@ -490,7 +531,7 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	converted, address, err := convertConfig(string(data))
+	converted, address, dns, err := convertConfig(string(data))
 	if err != nil {
 		writeError(w, lang, http.StatusBadRequest, tr(lang, "invalidConfig")+": "+err.Error())
 		return
@@ -523,6 +564,13 @@ func upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// DNS servers for start.sh, which points the TV resolver at them while
+	// the tunnel is up. An empty file means the config has no DNS line.
+	if err := os.WriteFile(filepath.Join(base, "conf", "dns"), []byte(dns), 0600); err != nil {
+		writeError(w, lang, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	writeSuccess(w, lang, backup, address)
 	shutdownServer("configuration accepted")
 }
@@ -536,17 +584,57 @@ func langFromRequest(r *http.Request) string {
 	if lang == "" {
 		lang = r.FormValue("lang")
 	}
+	if lang == "" {
+		lang = langFromAcceptLanguage(r.Header.Get("Accept-Language"))
+	}
 
 	return normalizeLang(lang)
 }
 
-func normalizeLang(lang string) string {
-	switch strings.ToLower(strings.TrimSpace(lang)) {
-	case "es", "es-es":
-		return "es"
-	default:
-		return "en"
+// langFromAcceptLanguage returns the first supported language listed in an
+// Accept-Language header, skipping entries with q=0, or "" if none matches.
+func langFromAcceptLanguage(header string) string {
+	for _, part := range strings.Split(header, ",") {
+		fields := strings.Split(part, ";")
+		rejected := false
+		for _, param := range fields[1:] {
+			param = strings.TrimSpace(param)
+			if strings.HasPrefix(param, "q=") {
+				if q, err := strconv.ParseFloat(param[2:], 64); err == nil && q <= 0 {
+					rejected = true
+				}
+			}
+		}
+		if rejected {
+			continue
+		}
+		if lang := supportedLang(fields[0]); lang != "" {
+			return lang
+		}
 	}
+	return ""
+}
+
+// supportedLang maps a language tag such as "tr", "tr-TR" or "es_ES" to a
+// supported language code, or "" when the language is not supported.
+func supportedLang(tag string) string {
+	l := strings.ToLower(strings.TrimSpace(tag))
+	if i := strings.IndexAny(l, "-_"); i >= 0 {
+		l = l[:i]
+	}
+	switch l {
+	case "en", "es", "tr":
+		return l
+	default:
+		return ""
+	}
+}
+
+func normalizeLang(lang string) string {
+	if l := supportedLang(lang); l != "" {
+		return l
+	}
+	return "en"
 }
 
 func tr(lang string, key string) string {
@@ -563,7 +651,7 @@ func tr(lang string, key string) string {
 			"successText":      "Your WireGuard configuration has been saved on the TV. The upload server has stopped.",
 			"backup":           "Backup",
 			"address":          "Address",
-			"next":             "Return to the app and press Stop VPN, then Start VPN.",
+			"next":             "Return to the app and press Connect. If it is already connected, press Disconnect first.",
 			"back":             "Upload another file",
 			"errorTitle":       "Upload failed",
 		},
@@ -579,9 +667,25 @@ func tr(lang string, key string) string {
 			"successText":      "La configuración WireGuard se ha guardado en la TV. El servidor de subida se ha detenido.",
 			"backup":           "Copia de seguridad",
 			"address":          "Address",
-			"next":             "Vuelve a la app y pulsa Parar VPN, y luego Arrancar VPN.",
+			"next":             "Vuelve a la app y pulsa Conectar. Si ya está conectada, pulsa antes Desconectar.",
 			"back":             "Subir otro archivo",
 			"errorTitle":       "Error al subir",
+		},
+		"tr": {
+			"methodNotAllowed": "Bu yönteme izin verilmiyor",
+			"badUpload":        "Yükleme işlenemedi.",
+			"invalidPin":       "Geçersiz erişim kodu.",
+			"tooManyAttempts":  "Çok fazla hatalı erişim kodu girildi. Yükleme sunucusunu yeniden başlatın.",
+			"missingFile":      "Yapılandırma dosyası eksik.",
+			"readFailed":       "Yüklenen dosya okunamadı.",
+			"invalidConfig":    "Geçersiz WireGuard yapılandırması",
+			"successTitle":     "Yapılandırma yüklendi",
+			"successText":      "WireGuard yapılandırmanız TV'ye kaydedildi. Yükleme sunucusu durduruldu.",
+			"backup":           "Yedek",
+			"address":          "Address",
+			"next":             "Uygulamaya dönün ve Bağlan düğmesine basın. Zaten bağlıysa önce Bağlantıyı kes düğmesine basın.",
+			"back":             "Başka bir dosya yükle",
+			"errorTitle":       "Yükleme başarısız",
 		},
 	}
 
@@ -783,9 +887,10 @@ const errorHTML = `<!doctype html>
 </body>
 </html>`
 
-func convertConfig(input string) (string, string, error) {
+func convertConfig(input string) (string, string, string, error) {
 	var out []string
 	var address string
+	var dns []string
 
 	allowed := map[string]bool{
 		"PrivateKey":          true,
@@ -818,7 +923,7 @@ func convertConfig(input string) (string, string, error) {
 
 		parts := strings.SplitN(line, "=", 2)
 		if len(parts) != 2 {
-			return "", "", fmt.Errorf("unrecognised line: %s", line)
+			return "", "", "", fmt.Errorf("unrecognised line: %s", line)
 		}
 
 		key := strings.TrimSpace(parts[0])
@@ -830,26 +935,38 @@ func convertConfig(input string) (string, string, error) {
 				address = firstIPv4OrFirst(val)
 			}
 			continue
-		case "DNS", "MTU", "Table", "SaveConfig", "PostUp", "PostDown", "PreUp", "PreDown":
+		case "DNS":
+			for _, d := range strings.Split(val, ",") {
+				if d = strings.TrimSpace(d); d != "" {
+					dns = append(dns, d)
+				}
+			}
+			continue
+		case "MTU", "Table", "SaveConfig", "PostUp", "PostDown", "PreUp", "PreDown":
 			continue
 		}
 
 		if !allowed[key] {
-			return "", "", fmt.Errorf("unsupported key: %s", key)
+			return "", "", "", fmt.Errorf("unsupported key: %s", key)
 		}
 
 		out = append(out, key+" = "+val)
 	}
 
 	if err := sc.Err(); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	if address == "" {
-		return "", "", fmt.Errorf("Address not found in the file")
+		return "", "", "", fmt.Errorf("Address not found in the file")
 	}
 
-	return strings.TrimSpace(strings.Join(out, "\n")) + "\n", address, nil
+	dnsFile := ""
+	if len(dns) > 0 {
+		dnsFile = strings.Join(dns, "\n") + "\n"
+	}
+
+	return strings.TrimSpace(strings.Join(out, "\n")) + "\n", address, dnsFile, nil
 }
 
 func firstIPv4OrFirst(s string) string {

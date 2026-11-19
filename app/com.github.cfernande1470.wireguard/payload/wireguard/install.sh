@@ -43,7 +43,7 @@ done
 
 echo
 echo "== checking scripts =="
-for f in start.sh stop.sh status.sh upload-start.sh upload-stop.sh autostart.sh boot.sh uninstall.sh; do
+for f in lib.sh start.sh stop.sh status.sh summary.sh watchdog.sh killswitch.sh leaktest.sh exec-clean.sh upload-start.sh upload-stop.sh autostart.sh boot.sh uninstall.sh; do
   if [ ! -x "$SRC/scripts/$f" ]; then
     echo "ERROR: missing executable $SRC/scripts/$f"
     exit 1

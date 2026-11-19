@@ -3,7 +3,7 @@ set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 APP_ID="com.github.cfernande1470.wireguard"
-VERSION="1.0.8"
+VERSION="1.1.0"
 APP="$ROOT/app/$APP_ID"
 IPK="$ROOT/dist/${APP_ID}_${VERSION}_all.ipk"
 MANIFEST="$ROOT/dist/$APP_ID.manifest.json"
@@ -30,8 +30,10 @@ for script in "$APP/payload/wireguard/install.sh" "$APP/payload/wireguard/script
   sh -n "$script"
 done
 
-test -x "$APP/payload/wireguard/scripts/boot.sh"
-test -x "$APP/payload/wireguard/scripts/exec-clean.sh"
+for script in boot.sh exec-clean.sh lib.sh watchdog.sh killswitch.sh summary.sh leaktest.sh; do
+  test -x "$APP/payload/wireguard/scripts/$script"
+done
+test -f "$APP/js/qr.js"
 
 if grep -R -n -E 'WG(GO)?="\$BASE/bin/|BIN="\$BASE/bin/' "$APP/payload/wireguard/scripts"; then
   echo "ERROR: packaged binaries must be resolved relative to their scripts" >&2
@@ -52,6 +54,9 @@ fi
 ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/applications/$APP_ID/appinfo.json$"
 ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/applications/$APP_ID/payload/wireguard/scripts/boot.sh$"
 ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/applications/$APP_ID/payload/wireguard/scripts/exec-clean.sh$"
+ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/applications/$APP_ID/payload/wireguard/scripts/watchdog.sh$"
+ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/applications/$APP_ID/payload/wireguard/scripts/lib.sh$"
+ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/applications/$APP_ID/js/qr.js$"
 ar p "$IPK" data.tar.gz | tar tzf - | grep -q "^usr/palm/packages/$APP_ID/packageinfo.json$"
 ar p "$IPK" data.tar.gz | tar xzO "usr/palm/applications/$APP_ID/appinfo.json" | grep -q "\"id\": \"$APP_ID\""
 grep -q "\"id\": \"$APP_ID\"" "$MANIFEST"
